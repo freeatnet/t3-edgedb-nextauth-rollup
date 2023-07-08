@@ -1,26 +1,8 @@
 module default {
-  abstract type HasTimestamps {
-    required property createdAt -> datetime {
-      readonly := true;
-      rewrite insert using (
-        datetime_of_statement()
-        if not __specified__.createdAt
-        else .createdAt
-      );
-    }
-
-    required property updatedAt -> datetime {
-      rewrite insert, update using (
-        datetime_of_statement()
-        if not __specified__.updatedAt
-        else .updatedAt
-      );
-    }
-  }
 }
 
 module authentication {
-  type User extending default::HasTimestamps {
+  type User extending meta::HasTimestamps {
     required property email -> str {
       constraint exclusive on (str_lower(__subject__));
     };
@@ -34,7 +16,7 @@ module authentication {
     link accounts := .<user[is authentication::Account];
   }
 
-  type Account extending default::HasTimestamps {
+  type Account extending meta::HasTimestamps {
     required property type -> str;
     required property provider -> str;
     required property providerAccountId -> str;
@@ -53,5 +35,26 @@ module authentication {
     };
 
     constraint exclusive on ((.provider, .providerAccountId));
+  }
+}
+
+module meta {
+  abstract type HasTimestamps {
+    required property createdAt -> datetime {
+      readonly := true;
+      rewrite insert using (
+        datetime_of_statement()
+        if not __specified__.createdAt
+        else .createdAt
+      );
+    }
+
+    required property updatedAt -> datetime {
+      rewrite insert, update using (
+        datetime_of_statement()
+        if not __specified__.updatedAt
+        else .updatedAt
+      );
+    }
   }
 }
