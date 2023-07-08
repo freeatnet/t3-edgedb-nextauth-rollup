@@ -1,11 +1,11 @@
 import { type DefaultSession, type NextAuthOptions } from "next-auth";
 import { type JWT } from "next-auth/jwt";
-import GithubProvider from "next-auth/providers/github";
 
 import { env } from "~/env.mjs";
 import { edgedbClient } from "~/server/edgedb";
 
 import { EdgeDBAdapter } from "./adapters/edgedb";
+import RollupProvider, { type RollupProfile } from "./providers/rollup";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -65,19 +65,30 @@ export const authOptions: NextAuthOptions = {
   },
   adapter: edgedbAdapter,
   providers: [
-    GithubProvider({
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
+    RollupProvider({
+      clientId: env.ROLLUP_CLIENT_ID,
+      clientSecret: env.ROLLUP_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope: "openid email profile erc_4337",
+          prompt: "consent", // always ask for authorization
+        },
+      },
+      httpOptions: {
+        timeout: 10000, // latency on the authorize endpoint seems higher than the default
+      },
+      profile(userinfo: RollupProfile) {
+        return {
+          id: userinfo.sub,
+          email: userinfo.email,
+          name: userinfo.name,
+          image: userinfo.picture,
+          // TODO: add support for these in edgedb adapter
+          // connected_accounts: userinfo.connected_accounts,
+          // erc_4337: userinfo.erc_4337,
+        };
+      },
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
   session: {
     strategy: "jwt",
