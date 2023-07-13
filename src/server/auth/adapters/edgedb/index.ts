@@ -13,7 +13,20 @@ export class EdgeDBAdapter implements Adapter<false> {
   constructor(private edgedbClient: Executor) {}
 
   createUser = async (user: Omit<AdapterUser, "id">): Promise<AdapterUser> => {
-    return await queries.createUser(this.edgedbClient, user);
+    const { email, emailVerified, name, image, ...restUser } = user;
+
+    if (Object.keys(restUser).length > 0) {
+      throw new Error(
+        `Unsupported user properties: ${Object.keys(restUser).join(", ")}`
+      );
+    }
+
+    return await queries.createUser(this.edgedbClient, {
+      email,
+      emailVerified,
+      name,
+      image,
+    });
   };
 
   getUser = async (id: string): Promise<AdapterUser | null> => {
@@ -37,7 +50,22 @@ export class EdgeDBAdapter implements Adapter<false> {
   updateUser = async (
     user: Partial<AdapterUser> & Pick<AdapterUser, "id">
   ): Promise<AdapterUser> => {
-    const updated = await queries.updateUser(this.edgedbClient, user);
+    const { id, email, emailVerified, name, image, ...restUser } = user;
+
+    if (Object.keys(restUser).length > 0) {
+      throw new Error(
+        `Unsupported user properties: ${Object.keys(restUser).join(", ")}`
+      );
+    }
+
+    const updated = await queries.updateUser(this.edgedbClient, {
+      id,
+      email,
+      emailVerified,
+      name,
+      image,
+    });
+
     if (!updated) {
       throw Error("user not found");
     }
@@ -48,7 +76,40 @@ export class EdgeDBAdapter implements Adapter<false> {
   deleteUser = undefined;
 
   linkAccount = async (account: AdapterAccount): Promise<void> => {
-    await queries.createLinkedAccount(this.edgedbClient, account);
+    const {
+      type,
+      provider,
+      providerAccountId,
+      access_token,
+      refresh_token,
+      expires_at,
+      token_type,
+      scope,
+      id_token,
+      session_state,
+      userId,
+      ...restAccount
+    } = account;
+
+    if (Object.keys(restAccount).length > 0) {
+      throw new Error(
+        `Unsupported account properties: ${Object.keys(restAccount).join(", ")}`
+      );
+    }
+
+    await queries.createLinkedAccount(this.edgedbClient, {
+      type,
+      provider,
+      providerAccountId,
+      access_token,
+      refresh_token,
+      expires_at,
+      token_type,
+      scope,
+      id_token,
+      session_state,
+      userId,
+    });
   };
 
   unlinkAccount = undefined;
